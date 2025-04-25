@@ -1,0 +1,308 @@
+syntax = "proto3";
+
+package chat.v1;
+
+option go_package = "/gen";
+
+import "google/protobuf/timestamp.proto";
+
+service ChatService {
+  // Tin nhắn 1-1 và nhóm
+  rpc SendMessage (SendMessageRequest) returns (SendMessageResponse);
+  rpc GetMessageHistory (GetMessageHistoryRequest) returns (stream Message);
+  rpc DeleteMessage (DeleteMessageRequest) returns (DeleteMessageResponse);
+  
+  // Quản lý cuộc trò chuyện
+  rpc CreateConversation (CreateConversationRequest) returns (Conversation);
+  rpc GetConversations (GetConversationsRequest) returns (GetConversationsResponse);
+  rpc UpdateConversation (UpdateConversationRequest) returns (Conversation);
+  
+  // Realtime Events
+  rpc StreamEvents (StreamEventsRequest) returns (stream Event);
+  
+  // Trạng thái người dùng
+  rpc UpdateUserStatus (UpdateUserStatusRequest) returns (UpdateUserStatusResponse);
+  rpc GetUserStatus (GetUserStatusRequest) returns (UserStatus);
+  
+  // Gọi thoại/video (WebRTC signaling)
+  rpc StartCall (StartCallRequest) returns (CallInfo);
+  rpc HandleCallSignal (stream CallSignal) returns (stream CallSignal);
+}
+
+// Định nghĩa message
+message Message {
+  string id = 1;
+  string conversation_id = 2;
+  string sender_id = 3;
+  string content = 4;
+  
+  enum MessageType {
+    TEXT = 0;
+    IMAGE = 1;
+    VIDEO = 2;
+    AUDIO = 3;
+    FILE = 4;
+    LOCATION = 5;
+  }
+  
+  MessageType type = 5;
+  map<string, string> metadata = 6;
+  google.protobuf.Timestamp sent_at = 7;
+  google.protobuf.Timestamp delivered_at = 8;
+  google.protobuf.Timestamp read_at = 9;
+  repeated string seen_by = 10;
+}
+
+// Định nghĩa conversation
+message Conversation {
+  string id = 1;
+  repeated string participant_ids = 2;
+  
+  enum ConversationType {
+    PRIVATE = 0;
+    GROUP = 1;
+    CHANNEL = 2;
+  }
+  
+  ConversationType type = 3;
+  string title = 4;
+  string avatar_url = 5;
+  string last_message_id = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// Định nghĩa sự kiện realtime
+message Event {
+  string event_id = 1;
+  string conversation_id = 2;
+  
+  oneof event_type {
+    Message new_message = 3;
+    string message_updated = 4;
+    string message_deleted = 5;
+    UserStatus user_status_changed = 6;
+    TypingIndicator typing_indicator = 7;
+    CallSignal call_signal = 8;
+  }
+  
+  google.protobuf.Timestamp occurred_at = 9;
+}
+
+// Các request/response
+message SendMessageRequest {
+  string conversation_id = 1;
+  string sender_id = 2;
+  string content = 3;
+  Message.MessageType type = 4;
+  map<string, string> metadata = 5;
+}
+
+message SendMessageResponse {
+  string message_id = 1;
+  google.protobuf.Timestamp sent_at = 2;
+}
+
+message GetMessageHistoryRequest {
+  string conversation_id = 1;
+  optional google.protobuf.Timestamp before = 2;
+  int32 limit = 3;
+}
+
+message DeleteMessageRequest {
+    string message_id = 1;
+    string requester_id = 2; // ID người yêu cầu xóa
+    bool delete_for_everyone = 3; // Xóa với mọi người hay chỉ bản thân
+  }
+  
+  message DeleteMessageResponse {
+    enum DeleteStatus {
+      SUCCESS = 0;
+      PARTIAL_SUCCESS = 1; // Một số thiết bị chưa đồng bộ
+      PERMISSION_DENIED = 2;
+      MESSAGE_NOT_FOUND = 3;
+    }
+    
+    DeleteStatus status = 1;
+    google.protobuf.Timestamp deleted_at = 2;
+  }
+
+message CreateConversationRequest {
+    repeated string participant_ids = 1;
+    string creator_id = 2;
+
+    oneof conversation_type {
+        PrivateConversation private_conversation = 3;
+        GroupConversation group_conversation = 4;
+    }
+
+    message PrivateConversation {
+        string title = 1;
+    }
+
+    message GroupConversation {
+        string title = 1;
+        optional string avatar_url = 2;
+        repeated string admin_ids = 3;
+    }
+}
+
+message GetConversationRequest {
+    string user_id = 1;
+    optional google.protobuf.Timestamp updated_since = 2;
+    int32 limit = 3;
+    optional string page_token = 4;
+}
+
+message GetConversationsRequest {
+    string user_id = 1;
+    optional google.protobuf.Timestamp updated_since = 2; // Lọc hội thoại có cập nhật từ thời điểm này
+    int32 limit = 3; // Số lượng hội thoại tối đa trả về
+    optional string page_token = 4; // Phân trang
+}
+  
+message GetConversationsResponse {
+    repeated Conversation conversations = 1;
+    string next_page_token = 2; // Token cho trang tiếp theo
+    int32 total_count = 3; // Tổng số hội thoại
+}
+
+message UpdateConversationRequest {
+    string conversation_id = 1;
+    string updater_id = 2;
+
+    oneof update {
+        string title = 3; // Đổi tên nhóm
+        string avatar_url = 4; // Đổi avatar
+        AddParticipants add_participants = 5;
+        RemoveParticipants remove_participants = 6;
+        PromoteAdmins promote_admins = 7;
+        DemoteAdmins demote_admins = 8;
+    }
+
+    message AddParticipants {
+        repeated string user_ids = 1;
+    }
+
+    message RemoveParticipants {
+        repeated string user_ids = 1;
+    }
+
+    message PromoteAdmins {
+        repeated string user_ids = 1;
+    }
+
+    message DemoteAdmins {
+        repeated string user_ids = 1;
+    }
+}
+
+message StreamEventsRequest {
+    string user_id = 1;
+    repeated string conversation_ids = 2;
+}
+
+message UpdateUserStatusRequest {
+    string user_id = 1;
+    UserStatus.Status status = 2;
+    optional string status_text = 3;
+    optional google.protobuf.Timestamp expires_at = 4; 
+}
+
+message UpdateUserStatusResponse {
+    google.protobuf.Timestamp updated_at = 1;
+    UserStatus new_status = 2;
+}
+
+message GetUserStatusRequest {
+    repeated string user_ids = 1; // Có thể query nhiều user cùng lúc
+}
+  
+
+// Typing indicators
+message TypingIndicator {
+    string user_id = 1;
+    string conversation_id = 2;
+    bool is_typing = 3;
+}
+
+// User status
+message UserStatus {
+    string user_id = 1;
+    enum Status {
+        OFFLINE = 0;
+        ONLINE = 1;
+        AWAY = 2;
+        DO_NOT_DISTURB = 3;
+    }
+    Status status = 2;
+    optional string status_text = 3;
+    google.protobuf.Timestamp last_seen = 4;
+}
+
+message CallInfo {
+    string call_id = 1;
+    CallStatus status = 2;
+    repeated string participant_ids = 3;
+    google.protobuf.Timestamp started_at = 4;
+    
+    enum CallStatus {
+      RINGING = 0;
+      ONGOING = 1;
+      ENDED = 2;
+      MISSED = 3;
+      DECLINED = 4;
+    }
+    
+    // Thông tin ICE servers cho WebRTC
+    repeated ICEServer ice_servers = 5;
+    
+    message ICEServer {
+      repeated string urls = 1;
+      optional string username = 2;
+      optional string credential = 3;
+    }
+  }
+
+// WebRTC call signaling
+message CallSignal {
+    string call_id = 1;
+    string sender_id = 2;
+    string conversation_id = 3;
+    
+    oneof signal {
+        StartCallRequest start_call = 4;
+        IceCandidate ice_candidate = 5;
+        SessionDescription session_description = 6;
+        CallResponse call_response = 7;
+        Hangup hangup = 8;
+    }
+}
+
+message StartCallRequest {
+    bool is_video = 1;
+}
+
+message IceCandidate {
+    string candidate = 1;
+    int32 sdp_m_line_index = 2;
+    string sdp_mid = 3;
+}
+
+message SessionDescription {
+    string type = 1; // "offer", "answer", etc.
+    string sdp = 2;
+}
+
+message CallResponse {
+    bool accepted = 1;
+}
+
+message Hangup {
+    enum Reason {
+        NORMAL = 0;
+        BUSY = 1;
+        TIMEOUT = 2;
+    }
+    Reason reason = 1;
+}
