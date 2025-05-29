@@ -33,6 +33,15 @@ const (
 	EventTypeCallEnded
 )
 
+type StatusType int
+
+const (
+	StatusOffline StatusType = iota
+	StatusOnline
+	StatusAway
+	StatusDoNotDisturb
+)
+
 type CallType int
 
 const (

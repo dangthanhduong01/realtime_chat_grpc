@@ -6,24 +6,13 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type User struct {
-	ID        string    `bson: "_id, omitempty" json:"id"`
-	Name      string    `bson: "name, omitempty" json:"name"`
-	Email     string    `bson: "email, omitempty" json:"email"`
-	Password  string    `bson: "password, omitempty" json:"password"`
-	AvatarURL string    `bson: "avatar_url, omitempty" json:"avatar_url"`
-	CreatedAt time.Time `bson: "created_at, omitempty" json:"created_at"`
-	UpdatedAt time.Time `bson: "updated_at, omitempty" json:"updated_at"`
-}
-
 type Conversation struct {
-	ID           primitive.ObjectID `bson: "_id, omitempty" json:"id"`
-	Type         ConversationType   `bson: "type, omitempty" json:"type"`
-	Title        string             `bson: "title, omitempty" json:"title"`
-	Participants []string           `bson: "participants, omitempty" json:"participants"`
-	Admins       []string           `bson: "admins, omitempty" json:"admins"`
-	AvatarURL    string             `bson: "avatar_url, omitempty" json:"avatar_url"`
-
+	ID            primitive.ObjectID `bson: "_id, omitempty" json:"id"`
+	Type          ConversationType   `bson: "type, omitempty" json:"type"`
+	Title         string             `bson: "title, omitempty" json:"title"`
+	Participants  []string           `bson: "participants, omitempty" json:"participants"`
+	Admins        []string           `bson: "admins, omitempty" json:"admins"`
+	AvatarURL     string             `bson: "avatar_url, omitempty" json:"avatar_url"`
 	LastMessageID primitive.ObjectID `bson: "last_message_id, omitempty" json:"last_message_id"`
 	CreatedAt     time.Time          `bson: "created_at, omitempty" json:"created_at"`
 	UpdatedAt     time.Time          `bson: "updated_at, omitempty" json:"updated_at"`
@@ -51,6 +40,21 @@ type Event struct {
 	MessageID      string      `bson: "message_id, omitempty" json:"message_id"`
 	Data           interface{} `bson: "data, omitempty" json:"data"`
 	Timestamp      time.Time   `bson: "timestamp, omitempty" json:"timestamp"`
+}
+
+type UserStatus struct {
+	UserID      string      `bson: "user_id, omitempty" json:"user_id"`
+	Status      StatusType  `bson: "status, omitempty" json:"status"`
+	StatusText  string      `bson: "status_text, omitempty" json:"status_text"`
+	LastSeen    time.Time   `bson: "last_seen, omitempty" json:"last_seen"`
+	LastUpdated time.Time   `bson: "updated_at, omitempty" json:"updated_at"`
+	DeviceInfo  *DeviceInfo `bson: "device_info, omitempty" json:"device_info"`
+}
+
+type DeviceInfo struct {
+	ID       string `bson: "id, omitempty" json:"id"`
+	Platform string `bson: "platform, omitempty" json:"platform"`
+	Version  string `bson: "version, omitempty" json:"version"`
 }
 
 type CallInfo struct {

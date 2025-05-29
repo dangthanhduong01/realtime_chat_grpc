@@ -1,0 +1,29 @@
+services:
+
+  postgres:
+    image: "postgres:14-alpine"
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chatapp
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./db-data/postgres/:/var/lib/postgresql/data/
+    networks:
+      - chatapp
+  mongo:
+    image: 'mongo:4.2.16-bionic'
+    ports:
+      - '27017:27017'
+    environment:
+      MONGO_INITDB_DATABASE: chatapp
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - ./db-data/mongo/:/data/db
+    networks:
+      - chatapp
+networks:
+  chatapp:

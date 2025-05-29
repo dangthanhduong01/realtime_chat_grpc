@@ -132,8 +132,8 @@ message CreateConversationRequest {
     string creator_id = 2;
 
     oneof conversation_type {
-        PrivateConversation private_conversation = 3;
-        GroupConversation group_conversation = 4;
+        PrivateConversation private = 3;
+        GroupConversation group = 4;
     }
 
     message PrivateConversation {
